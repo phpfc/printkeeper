@@ -1,2 +1,4 @@
 github.com/OpenPrinting/goipp v1.2.0 h1:qeB3GyhhB7NM16quwyl51CsTEHFb9chZXAprt+00NKo=
 github.com/OpenPrinting/goipp v1.2.0/go.mod h1:ot2iw+QF7fVLaX+55JUNlF5YSDNiXVo2LRAv21iGcQI=
+golang.org/x/text v0.44.0 h1:YItdp/mQNGnsmrgpcdA5yQ3bnRxCfo/Tj/iByGW9GGo=
+golang.org/x/text v0.44.0/go.mod h1:S4FR1waQ9LbjQTls97SyRjDaUUVkaM+cXwwuG/G+MwY=

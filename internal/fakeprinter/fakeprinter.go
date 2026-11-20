@@ -16,15 +16,16 @@ import (
 )
 
 // Start launches ippeveprinter advertising name over Bonjour on a free TCP
-// port, waits for it to accept connections, and returns the chosen port
-// and a cleanup func that kills it. ippeveprinter advertises immediately
-// on start; this environment blocks foreground sleep, so readiness is
+// port, waits for it to accept connections, and returns the chosen port,
+// the spool directory ippeveprinter writes received jobs to, and a
+// cleanup func that kills it. ippeveprinter advertises immediately on
+// start; this environment blocks foreground sleep, so readiness is
 // polled instead of waited on blindly.
-func Start(t *testing.T, name string) (port int, cleanup func()) {
+func Start(t *testing.T, name string) (port int, spoolDir string, cleanup func()) {
 	t.Helper()
 
 	port = freePort(t)
-	spoolDir := t.TempDir()
+	spoolDir = t.TempDir()
 
 	cmd := exec.Command("/usr/bin/ippeveprinter",
 		"-p", fmt.Sprintf("%d", port),
@@ -49,7 +50,7 @@ func Start(t *testing.T, name string) (port int, cleanup func()) {
 		}
 	}
 
-	return port, func() {
+	return port, spoolDir, func() {
 		_ = cmd.Process.Kill()
 		_, _ = cmd.Process.Wait()
 	}

@@ -15,7 +15,7 @@ import (
 // ippeveprinter instance and expects StatePresent with a real attribute
 // set and a positive round-trip time.
 func TestProbeAgainstAlivePrinterReturnsPresent(t *testing.T) {
-	port, cleanup := fakeprinter.Start(t, "ProbeAlivePrinter")
+	port, _, cleanup := fakeprinter.Start(t, "ProbeAlivePrinter")
 	defer cleanup()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -40,7 +40,7 @@ func TestProbeAgainstAlivePrinterReturnsPresent(t *testing.T) {
 // Review Focus 5's counterpart: with the network up, nothing answering
 // means StateAbsent.
 func TestProbeAgainstKilledPrinterReturnsAbsent(t *testing.T) {
-	port, cleanup := fakeprinter.Start(t, "ProbeKilledPrinter")
+	port, _, cleanup := fakeprinter.Start(t, "ProbeKilledPrinter")
 	cleanup() // kill it immediately; the port is now unoccupied.
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -67,7 +67,7 @@ func TestProbeAgainstKilledPrinterReturnsAbsent(t *testing.T) {
 // the two attributes a genuinely stopped device would differ on, then
 // feeds that map into the same classify function Probe uses internally.
 func TestProbeOfStoppedPrinterReturnsErroredNotAbsent(t *testing.T) {
-	port, cleanup := fakeprinter.Start(t, "ProbeStoppedPrinter")
+	port, _, cleanup := fakeprinter.Start(t, "ProbeStoppedPrinter")
 	defer cleanup()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
