@@ -9,6 +9,26 @@ import (
 	"github.com/phpfc/printkeeper/internal/inspect"
 )
 
+// TestWeightUUIDDominatesSumOfOtherWeights pins the invariant a later
+// task's repair confidence ladder depends on for safety: ThresholdExact,
+// the score at or above which the ladder repairs the queue silently with
+// no user notification, is set to WeightUUID. If WeightUUID did not
+// strictly exceed every other weight combined, a candidate that matched
+// every non-UUID signal (MAC, DeviceID, ServiceName, ResourcePath) but
+// genuinely had a different UUID — or no UUID to compare at all — could
+// cross that threshold and get silently adopted as the wrong printer. That
+// is the design's first anti-goal arriving through arithmetic, not a
+// network failure. The sum is written out by name, not as a literal
+// constant, so bumping any individual weight re-checks dominance instead
+// of comparing against a number that was only ever correct at the moment
+// it was typed.
+func TestWeightUUIDDominatesSumOfOtherWeights(t *testing.T) {
+	sumOfOtherWeights := WeightMAC + WeightDeviceID + WeightServiceName + WeightResourcePath
+	if WeightUUID <= sumOfOtherWeights {
+		t.Fatalf("WeightUUID (%d) must exceed the sum of every other weight (%d); otherwise a candidate matching everything except the UUID could reach ThresholdExact and be silently adopted as the wrong printer", WeightUUID, sumOfOtherWeights)
+	}
+}
+
 // TestScoreIsAdditiveOverMatchingNonEmptyFields pins the weight table from
 // the brief directly against the internal scoring function: each field
 // contributes its weight only when both sides are non-empty and equal,

@@ -6,13 +6,18 @@ import (
 	"github.com/phpfc/printkeeper/internal/discovery"
 )
 
-// Weights for each field a Fingerprint comparison can agree on. A UUID
-// match alone outweighs any combination of the others that discovery alone
-// can currently produce (ServiceName + ResourcePath = 25), so a confirmed
-// UUID always wins the ranking. Do not adjust these: later tasks' repair
-// confidence ladder is calibrated against these exact values.
+// Weights for each field a Fingerprint comparison can agree on. WeightUUID
+// strictly dominates the sum of every other weight (60+25+20+5=110 < 200),
+// so no combination of non-UUID signals can ever reach a UUID match's
+// score — not just the combination discovery can produce today. That
+// dominance is load-bearing: a later task's repair confidence ladder treats
+// a score at or above WeightUUID as license to repair silently, with no
+// user notification, so a false positive here is the design's first
+// anti-goal (printing to the wrong printer) arriving through arithmetic.
+// TestWeightUUIDDominatesSumOfOtherWeights pins this. Do not adjust these
+// without re-verifying that invariant.
 const (
-	WeightUUID         = 100
+	WeightUUID         = 200
 	WeightMAC          = 60
 	WeightDeviceID     = 25
 	WeightServiceName  = 20
