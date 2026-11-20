@@ -1,0 +1,10 @@
+# Build artifacts
+/printkeeper
+/bin/
+
+# Go
+*.test
+*.out
+
+# macOS
+.DS_Store
