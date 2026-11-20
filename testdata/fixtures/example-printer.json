@@ -1,0 +1,412 @@
+{
+  "Candidate": {
+    "ServiceName": "FixturePrinter",
+    "URI": "ipps://fake-c53659afe138.example.invalid:42807/ipp/print",
+    "UUID": "df6c07de-b847-d68d-0f6e-83d3f5195846",
+    "Model": "Example Printer",
+    "ResourcePath": "ipp/print",
+    "PDLs": [
+      "image/pwg-raster",
+      "image/urf"
+    ],
+    "Host": "fake-c53659afe138.example.invalid",
+    "Port": 42807
+  },
+  "Attributes": {
+    "attributes-charset": [
+      "utf-8"
+    ],
+    "attributes-natural-language": [
+      "en-us"
+    ],
+    "charset-configured": [
+      "utf-8"
+    ],
+    "charset-supported": [
+      "us-ascii",
+      "utf-8"
+    ],
+    "color-supported": [
+      "false"
+    ],
+    "compression-supported": [
+      "deflate",
+      "gzip",
+      "none"
+    ],
+    "copies-default": [
+      "1"
+    ],
+    "copies-supported": [
+      "1-1"
+    ],
+    "document-format-default": [
+      "application/octet-stream"
+    ],
+    "document-format-supported": [
+      "application/octet-stream",
+      "image/pwg-raster",
+      "image/urf"
+    ],
+    "finishings-default": [
+      "3"
+    ],
+    "finishings-supported": [
+      "3"
+    ],
+    "generated-natural-language-supported": [
+      "en"
+    ],
+    "identify-actions-default": [
+      "sound"
+    ],
+    "identify-actions-supported": [
+      "display",
+      "sound"
+    ],
+    "ipp-features-supported": [
+      "ipp-everywhere"
+    ],
+    "ipp-versions-supported": [
+      "1.1",
+      "2.0"
+    ],
+    "job-creation-attributes-supported": [
+      "document-access",
+      "document-charset",
+      "document-format",
+      "document-message",
+      "document-metadata",
+      "document-name",
+      "document-natural-language",
+      "ipp-attribute-fidelity",
+      "job-name",
+      "job-priority",
+      "copies",
+      "finishings",
+      "media",
+      "orientation-requested",
+      "output-bin",
+      "page-ranges",
+      "print-color-mode",
+      "print-content-optimize",
+      "print-quality",
+      "print-rendering-intent",
+      "printer-resolution",
+      "sides"
+    ],
+    "job-ids-supported": [
+      "true"
+    ],
+    "job-k-octets-supported": [
+      "0-239362496"
+    ],
+    "job-priority-default": [
+      "50"
+    ],
+    "job-priority-supported": [
+      "1"
+    ],
+    "job-sheets-default": [
+      "none"
+    ],
+    "job-sheets-supported": [
+      "none"
+    ],
+    "media-bottom-margin-supported": [
+      "0",
+      "1168"
+    ],
+    "media-col-default": [
+      "{media-key=na_letter_8.5x11in_main_stationery media-size={x-dimension=21590 y-dimension=27940} media-size-name=na_letter_8.5x11in media-bottom-margin=635 media-left-margin=635 media-right-margin=635 media-top-margin=635 media-source=main media-type=stationery}"
+    ],
+    "media-col-ready": [
+      "{media-key=na_letter_8.5x11in_main_stationery media-size={x-dimension=21590 y-dimension=27940} media-size-name=na_letter_8.5x11in media-bottom-margin=635 media-left-margin=635 media-right-margin=635 media-top-margin=635 media-source=main media-type=stationery}",
+      "{media-key=na_number-10_4.125x9.5in_by-pass-tray_envelope media-size={x-dimension=10477 y-dimension=24130} media-size-name=na_number-10_4.125x9.5in media-bottom-margin=635 media-left-margin=635 media-right-margin=635 media-top-margin=635 media-source=by-pass-tray media-type=envelope}"
+    ],
+    "media-col-supported": [
+      "media-bottom-margin",
+      "media-left-margin",
+      "media-right-margin",
+      "media-size",
+      "media-size-name",
+      "media-source",
+      "media-top-margin",
+      "media-type"
+    ],
+    "media-default": [
+      "na_letter_8.5x11in"
+    ],
+    "media-left-margin-supported": [
+      "340",
+      "635"
+    ],
+    "media-ready": [
+      "na_letter_8.5x11in",
+      "na_number-10_4.125x9.5in"
+    ],
+    "media-right-margin-supported": [
+      "340",
+      "635"
+    ],
+    "media-size-supported": [
+      "{x-dimension=21590 y-dimension=27940}",
+      "{x-dimension=21590 y-dimension=35560}",
+      "{x-dimension=21000 y-dimension=29700}",
+      "{x-dimension=10477 y-dimension=24130}",
+      "{x-dimension=11000 y-dimension=22000}"
+    ],
+    "media-source-supported": [
+      "auto",
+      "main",
+      "manual",
+      "by-pass-tray"
+    ],
+    "media-supported": [
+      "na_letter_8.5x11in",
+      "na_legal_8.5x14in",
+      "iso_a4_210x297mm",
+      "na_number-10_4.125x9.5in",
+      "iso_dl_110x220mm"
+    ],
+    "media-top-margin-supported": [
+      "0",
+      "102"
+    ],
+    "media-type-supported": [
+      "auto",
+      "cardstock",
+      "envelope",
+      "labels",
+      "other",
+      "stationery",
+      "stationery-letterhead",
+      "transparency"
+    ],
+    "multiple-document-handling-supported": [
+      "separate-documents-uncollated-copies",
+      "separate-documents-collated-copies"
+    ],
+    "multiple-document-jobs-supported": [
+      "false"
+    ],
+    "multiple-operation-time-out": [
+      "60"
+    ],
+    "multiple-operation-time-out-action": [
+      "abort-job"
+    ],
+    "natural-language-configured": [
+      "en"
+    ],
+    "operations-supported": [
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "57",
+      "59",
+      "60"
+    ],
+    "orientation-requested-default": [
+      "3"
+    ],
+    "orientation-requested-supported": [
+      "3"
+    ],
+    "output-bin-default": [
+      "face-down"
+    ],
+    "output-bin-supported": [
+      "face-down"
+    ],
+    "page-ranges-supported": [
+      "false"
+    ],
+    "pages-per-minute": [
+      "10"
+    ],
+    "pdl-override-supported": [
+      "attempted"
+    ],
+    "preferred-attributes-supported": [
+      "false"
+    ],
+    "print-color-mode-default": [
+      "monochrome"
+    ],
+    "print-color-mode-supported": [
+      "monochrome"
+    ],
+    "print-content-optimize-default": [
+      "auto"
+    ],
+    "print-content-optimize-supported": [
+      "auto"
+    ],
+    "print-quality-default": [
+      "4"
+    ],
+    "print-quality-supported": [
+      "3",
+      "4",
+      "5"
+    ],
+    "print-rendering-intent-default": [
+      "auto"
+    ],
+    "print-rendering-intent-supported": [
+      "auto"
+    ],
+    "printer-config-change-date-time": [
+      "2026-11-20T19:11:27Z"
+    ],
+    "printer-config-change-time": [
+      "0"
+    ],
+    "printer-current-time": [
+      "2026-11-20T19:11:33Z"
+    ],
+    "printer-device-id": [
+      "MFG:Example;MDL:Printer;CMD:PWG,URF;"
+    ],
+    "printer-geo-location": [
+      ""
+    ],
+    "printer-get-attributes-supported": [
+      "document-format"
+    ],
+    "printer-icons": [
+      "https://fake-c53659afe138.example.invalid:42807/icon.png"
+    ],
+    "printer-info": [
+      "FixturePrinter"
+    ],
+    "printer-input-tray": [
+      "747970653d7368656574466565644175746f52656d6f7661626c65547261793b6d65646961666565643d303b6d6564696178666565643d303b6d617863617061636974793d2d323b6c6576656c3d2d323b7374617475733d303b6e616d653d6175746f",
+      "747970653d7368656574466565644175746f52656d6f7661626c65547261793b6d65646961666565643d303b6d6564696178666565643d303b6d617863617061636974793d3235303b6c6576656c3d3130303b7374617475733d303b6e616d653d6d61696e",
+      "747970653d7368656574466565644d616e75616c3b6d65646961666565643d303b6d6564696178666565643d303b6d617863617061636974793d313b6c6576656c3d2d323b7374617475733d303b6e616d653d6d616e75616c",
+      "747970653d7368656574466565644175746f4e6f6e52656d6f7661626c65547261793b6d65646961666565643d303b6d6564696178666565643d303b6d617863617061636974793d32353b6c6576656c3d2d323b7374617475733d303b6e616d653d62792d706173732d74726179"
+    ],
+    "printer-is-accepting-jobs": [
+      "true"
+    ],
+    "printer-location": [
+      ""
+    ],
+    "printer-make-and-model": [
+      "Example Printer"
+    ],
+    "printer-more-info": [
+      "https://fake-c53659afe138.example.invalid:42807/"
+    ],
+    "printer-name": [
+      "FixturePrinter"
+    ],
+    "printer-organization": [
+      ""
+    ],
+    "printer-organizational-unit": [
+      ""
+    ],
+    "printer-resolution-default": [
+      "600x600dpi"
+    ],
+    "printer-resolution-supported": [
+      "600x600dpi"
+    ],
+    "printer-state": [
+      "3"
+    ],
+    "printer-state-change-date-time": [
+      "2026-11-20T19:11:27Z"
+    ],
+    "printer-state-change-time": [
+      "0"
+    ],
+    "printer-state-message": [
+      "Idle."
+    ],
+    "printer-state-reasons": [
+      "none"
+    ],
+    "printer-supply": [
+      "696e6465783d313b636c6173733d72656365707461636c6554686174497346696c6c65643b747970653d7761737465546f6e65723b756e69743d70657263656e743b6d617863617061636974793d3130303b6c6576656c3d32353b636f6c6f72616e746e616d653d756e6b6e6f776e3b",
+      "696e6465783d323b636c6173733d737570706c79546861744973436f6e73756d65643b747970653d746f6e65723b756e69743d70657263656e743b6d617863617061636974793d3130303b6c6576656c3d37353b636f6c6f72616e746e616d653d626c61636b3b"
+    ],
+    "printer-supply-description": [
+      "Toner Waste Tank",
+      "Black Toner"
+    ],
+    "printer-supply-info-uri": [
+      "https://fake-c53659afe138.example.invalid:42807/supplies"
+    ],
+    "printer-up-time": [
+      "6"
+    ],
+    "printer-uri-supported": [
+      "ipp://fake-c53659afe138.example.invalid:42807/ipp/print",
+      "ipps://fake-c53659afe138.example.invalid:42807/ipp/print"
+    ],
+    "printer-uuid": [
+      "urn:uuid:df6c07de-b847-d68d-0f6e-83d3f5195846"
+    ],
+    "pwg-raster-document-resolution-supported": [
+      "300x300dpi",
+      "600x600dpi"
+    ],
+    "pwg-raster-document-type-supported": [
+      "black_1",
+      "sgray_8"
+    ],
+    "queued-job-count": [
+      "0"
+    ],
+    "reference-uri-schemes-supported": [
+      "file",
+      "ftp",
+      "http",
+      "https"
+    ],
+    "sides-default": [
+      "one-sided"
+    ],
+    "sides-supported": [
+      "one-sided"
+    ],
+    "urf-supported": [
+      "CP1",
+      "IS1-4-5-19",
+      "MT1-2-3-4-5-6",
+      "RS600",
+      "V1.4",
+      "W8"
+    ],
+    "uri-authentication-supported": [
+      "none",
+      "none"
+    ],
+    "uri-security-supported": [
+      "none",
+      "tls"
+    ],
+    "which-jobs-supported": [
+      "completed",
+      "not-completed",
+      "aborted",
+      "all",
+      "canceled",
+      "pending",
+      "pending-held",
+      "processing",
+      "processing-stopped"
+    ]
+  },
+  "RoundTrip": 40318167
+}
