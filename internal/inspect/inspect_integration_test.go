@@ -4,67 +4,15 @@ package inspect
 
 import (
 	"context"
-	"fmt"
-	"net"
-	"os/exec"
 	"testing"
 	"time"
 
 	"github.com/phpfc/printkeeper/internal/discovery"
+	"github.com/phpfc/printkeeper/internal/fakeprinter"
 )
 
-// startFakePrinter launches ippeveprinter advertising "SpikePrinter" over
-// Bonjour on a free TCP port, waits for it to accept connections, and
-// returns the chosen port and a cleanup func that kills it. ippeveprinter
-// advertises immediately on start; this environment blocks foreground
-// sleep, so readiness is polled instead of waited on blindly.
-func startFakePrinter(t *testing.T) (port int, cleanup func()) {
-	t.Helper()
-
-	port = freePort(t)
-	spoolDir := t.TempDir()
-
-	cmd := exec.Command("/usr/bin/ippeveprinter",
-		"-p", fmt.Sprintf("%d", port),
-		"-d", spoolDir,
-		"-D", "printkeeper integration test fixture",
-		"SpikePrinter",
-	)
-	if err := cmd.Start(); err != nil {
-		t.Fatalf("start ippeveprinter: %v", err)
-	}
-
-	deadline := time.Now().Add(20 * time.Second)
-	for {
-		conn, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), 200*time.Millisecond)
-		if err == nil {
-			conn.Close()
-			break
-		}
-		if time.Now().After(deadline) {
-			_ = cmd.Process.Kill()
-			t.Fatalf("ippeveprinter did not open port %d within deadline: %v", port, err)
-		}
-	}
-
-	return port, func() {
-		_ = cmd.Process.Kill()
-		_, _ = cmd.Process.Wait()
-	}
-}
-
-func freePort(t *testing.T) int {
-	t.Helper()
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("find free port: %v", err)
-	}
-	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port
-}
-
 func TestBrowseAndInspectAgainstFakePrinter(t *testing.T) {
-	port, cleanup := startFakePrinter(t)
+	port, cleanup := fakeprinter.Start(t, "SpikePrinter")
 	defer cleanup()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
