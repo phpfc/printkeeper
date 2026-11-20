@@ -1,7 +1,8 @@
-// Package ippclient sends IPP Get-Printer-Attributes requests and decodes
-// the response into a flat attribute map. It is the one place that knows
-// how to build and parse that request over HTTP(S); internal/inspect and
-// internal/probe both build on it instead of each encoding IPP themselves.
+// Package ippclient sends IPP requests over HTTP(S) and decodes the
+// response into attribute maps. It is the one place that knows how to
+// build and parse those requests; internal/inspect, internal/probe, and
+// internal/queue all build on it instead of each encoding IPP
+// themselves.
 package ippclient
 
 import (
@@ -64,35 +65,11 @@ func GetPrinterAttributes(ctx context.Context, uri string, requested []string) (
 	req.Operation.Add(goipp.MakeAttribute("attributes-charset", goipp.TagCharset, goipp.String("utf-8")))
 	req.Operation.Add(goipp.MakeAttribute("attributes-natural-language", goipp.TagLanguage, goipp.String("en-US")))
 	req.Operation.Add(goipp.MakeAttribute("printer-uri", goipp.TagURI, goipp.String(uri)))
+	req.Operation.Add(requestedAttributesValue(requested))
 
-	reqAttrs := goipp.Attribute{Name: "requested-attributes"}
-	for _, name := range requested {
-		reqAttrs.Values.Add(goipp.TagKeyword, goipp.String(name))
-	}
-	req.Operation.Add(reqAttrs)
-
-	payload, err := req.EncodeBytes()
+	msg, rtt, err := sendRequest(ctx, uri, req)
 	if err != nil {
-		return nil, 0, 0, fmt.Errorf("encode ipp request: %w", err)
-	}
-
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, toHTTPURL(uri), bytes.NewReader(payload))
-	if err != nil {
-		return nil, 0, 0, fmt.Errorf("build http request: %w", err)
-	}
-	httpReq.Header.Set("Content-Type", goipp.ContentType)
-
-	start := time.Now()
-	resp, err := client.Do(httpReq)
-	rtt := time.Since(start)
-	if err != nil {
-		return nil, 0, rtt, fmt.Errorf("ipp request to %s: %w", uri, err)
-	}
-	defer resp.Body.Close()
-
-	var msg goipp.Message
-	if err := msg.Decode(resp.Body); err != nil {
-		return nil, 0, rtt, &MalformedResponseError{err: fmt.Errorf("decode ipp response from %s: %w", uri, err)}
+		return nil, 0, rtt, err
 	}
 
 	attrs := map[string][]string{}
@@ -105,6 +82,99 @@ func GetPrinterAttributes(ctx context.Context, uri string, requested []string) (
 	}
 
 	return attrs, goipp.Status(msg.Code), rtt, nil
+}
+
+// CupsGetPrinters sends a CUPS-Get-Printers request to the server at uri
+// (e.g. "ipp://localhost:631/") asking for the given attribute keywords,
+// and returns one attribute map per printer the server reports.
+//
+// Unlike GetPrinterAttributes, which asks about a single device and so
+// may safely flatten every group in the response into one map,
+// CUPS-Get-Printers answers for the whole server: its response carries
+// one printer-attributes group per queue configured on the host.
+// Flattening those together would merge unrelated queues' attributes
+// into a single record, so each group is kept separate here.
+//
+// A host with no queues configured is not an error: cupsd answers that
+// case with status client-error-not-found rather than an empty successful
+// response, so callers must treat that specific status as "zero
+// printers", not as a failure.
+//
+// The natural-language value here is "en", not "en-US" as
+// GetPrinterAttributes uses for a device: a spike found that this
+// server's own cupsd — unlike the devices GetPrinterAttributes talks to
+// — validates this vendor-extension operation's language tag strictly
+// against RFC 3066 and rejects "en-US" with client-error-bad-request.
+// "en" is accepted.
+func CupsGetPrinters(ctx context.Context, uri string, requested []string) ([]map[string][]string, goipp.Status, error) {
+	req := goipp.NewRequest(goipp.DefaultVersion, goipp.OpCupsGetPrinters, 1)
+	req.Operation.Add(goipp.MakeAttribute("attributes-charset", goipp.TagCharset, goipp.String("utf-8")))
+	req.Operation.Add(goipp.MakeAttribute("attributes-natural-language", goipp.TagLanguage, goipp.String("en")))
+	req.Operation.Add(requestedAttributesValue(requested))
+
+	msg, _, err := sendRequest(ctx, uri, req)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var printers []map[string][]string
+	for _, group := range msg.AttrGroups() {
+		if group.Tag != goipp.TagPrinterGroup {
+			continue
+		}
+		attrs := map[string][]string{}
+		for _, attr := range group.Attrs {
+			for _, v := range attr.Values {
+				attrs[attr.Name] = append(attrs[attr.Name], v.V.String())
+			}
+		}
+		printers = append(printers, attrs)
+	}
+
+	return printers, goipp.Status(msg.Code), nil
+}
+
+// requestedAttributesValue builds the "requested-attributes" operation
+// attribute shared by every IPP request in this package that asks the
+// server to limit what it reports.
+func requestedAttributesValue(requested []string) goipp.Attribute {
+	attr := goipp.Attribute{Name: "requested-attributes"}
+	for _, name := range requested {
+		attr.Values.Add(goipp.TagKeyword, goipp.String(name))
+	}
+	return attr
+}
+
+// sendRequest encodes req, POSTs it to uri, and decodes the response
+// into an IPP message. It is the one place that knows how to perform
+// that HTTP round trip; every operation in this package builds on it
+// instead of repeating the encode/post/decode sequence itself.
+func sendRequest(ctx context.Context, uri string, req *goipp.Message) (*goipp.Message, time.Duration, error) {
+	payload, err := req.EncodeBytes()
+	if err != nil {
+		return nil, 0, fmt.Errorf("encode ipp request: %w", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, toHTTPURL(uri), bytes.NewReader(payload))
+	if err != nil {
+		return nil, 0, fmt.Errorf("build http request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", goipp.ContentType)
+
+	start := time.Now()
+	resp, err := client.Do(httpReq)
+	rtt := time.Since(start)
+	if err != nil {
+		return nil, rtt, fmt.Errorf("ipp request to %s: %w", uri, err)
+	}
+	defer resp.Body.Close()
+
+	var msg goipp.Message
+	if err := msg.Decode(resp.Body); err != nil {
+		return nil, rtt, &MalformedResponseError{err: fmt.Errorf("decode ipp response from %s: %w", uri, err)}
+	}
+
+	return &msg, rtt, nil
 }
 
 // toHTTPURL rewrites an ipp(s):// printer URI to the http(s):// URL IPP is

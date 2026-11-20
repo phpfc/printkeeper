@@ -2,4 +2,7 @@ module github.com/phpfc/printkeeper
 
 go 1.27.4
 
-require github.com/OpenPrinting/goipp v1.2.0
+require (
+	github.com/OpenPrinting/goipp v1.2.0
+	golang.org/x/text v0.44.0
+)

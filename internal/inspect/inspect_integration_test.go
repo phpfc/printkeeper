@@ -12,7 +12,7 @@ import (
 )
 
 func TestBrowseAndInspectAgainstFakePrinter(t *testing.T) {
-	port, cleanup := fakeprinter.Start(t, "SpikePrinter")
+	port, _, cleanup := fakeprinter.Start(t, "SpikePrinter")
 	defer cleanup()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
