@@ -153,7 +153,7 @@ git commit -m "feat(discovery): add bonjour discovery and printer inspection"
   - `func FromCandidate(c discovery.Candidate) Fingerprint`
   - `type Scored struct { Candidate discovery.Candidate; Score int }`
   - `func Match(stored Fingerprint, candidates []discovery.Candidate) []Scored` — sorted descending by score
-  - `const ( WeightUUID = 100; WeightMAC = 60; WeightDeviceID = 25; WeightServiceName = 20; WeightResourcePath = 5 )`
+  - `const ( WeightUUID = 200; WeightMAC = 60; WeightDeviceID = 25; WeightServiceName = 20; WeightResourcePath = 5 )` — WeightUUID must strictly exceed the sum of the other four (110), so no combination of non-UUID signals can ever reach a UUID match's score
 
 - [ ] **Step 1: Write the failing weight tests**
 
@@ -470,7 +470,7 @@ git commit -m "feat(resolve): add ordered address resolution strategies"
   - `type Decision struct { Action Action; Target discovery.Candidate; Choices []discovery.Candidate; Reason string }`
   - `func Decide(a store.Adopted, p probe.Result, matches []identity.Scored, now time.Time) Decision`
   - `func Sweep(ctx context.Context, queues []queue.Queue, adopted []store.Adopted, candidates []discovery.Candidate, now time.Time) []Decision`
-  - `const ( ThresholdExact = WeightUUID; ThresholdPartial = 40; AbandonAfter = 21 * 24 * time.Hour )`
+  - `const ( ThresholdExact = WeightUUID; ThresholdPartial = 40; AbandonAfter = 21 * 24 * time.Hour )` — ThresholdExact resolves to `200` (Task 2's `WeightUUID`), a score only a UUID match can ever reach, since every other weight summed is 110
 
 - [ ] **Step 1: Write the failing ladder table test**
 
