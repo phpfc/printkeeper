@@ -467,7 +467,7 @@ git commit -m "feat(resolve): add ordered address resolution strategies"
 - Consumes: `identity.Scored` (Task 2), `probe.Result` (Task 3), `store.Adopted` (Task 5), `resolve.Attempt` (Task 6) for the failure report.
 - Produces:
   - `type Action int` with `ActionNothing`, `ActionRepairSilently`, `ActionRepairAndRecord`, `ActionAsk`, `ActionReport`, `ActionLetGo`
-  - `type Decision struct { Action Action; Target discovery.Candidate; Choices []discovery.Candidate; Reason string }`
+  - `type Decision struct { QueueName string; Action Action; Target discovery.Candidate; Choices []discovery.Candidate; Reason string }` — QueueName makes a Decision self-describing (populated from the store.Adopted it was decided about) so a caller never has to re-associate it with a queue by position in Sweep's returned slice
   - `func Decide(a store.Adopted, p probe.Result, matches []identity.Scored, now time.Time) Decision`
   - `func Sweep(ctx context.Context, queues []queue.Queue, adopted []store.Adopted, candidates []discovery.Candidate, now time.Time) []Decision`
   - `const ( ThresholdExact = WeightUUID; ThresholdPartial = 40; AbandonAfter = 21 * 24 * time.Hour )` — ThresholdExact resolves to `200` (Task 2's `WeightUUID`), a score only a UUID match can ever reach, since every other weight summed is 110
