@@ -104,6 +104,29 @@ heartbeat, never a tight poll loop.
 Tools only, no full Xcode. The Go core and CLI build today; the SwiftUI client
 will require installing Xcode.
 
+**Real printers may refuse plaintext IPP.** `inspect` against the first real
+printer available on the network (an Epson on port 631) returned `HTTP/1.1
+426 Upgrade Required` with an `Upgrade: TLS/1.0, HTTP/1.1` header and an
+empty body — the device will not speak IPP over plaintext HTTP at all.
+`ipptool` reads the same device without trouble only because CUPS's HTTP
+layer performs the upgrade underneath it. `internal/ippclient` now inspects
+the HTTP status before decoding: on 426 it retries the identical request
+against `https://` on the same host:port the original URI named (not a
+different endpoint), exactly once. Certificate verification is disabled for
+that TLS connection — and, pragmatically, for every TLS connection this
+client makes to a printer, direct `ipps://` included, since a discovered
+printer can advertise `ipps://` without ever producing a 426 to retry
+against. Printers ship certificates self-signed by the device itself, with
+no CA to validate against; CUPS itself trusts a printer's certificate on
+first use for the same reason; and printkeeper sends no credentials over
+this connection, only attribute queries and user-initiated print jobs. This
+does not extend to `queue.List`'s traffic with the local cupsd, which is
+always plain HTTP and never negotiates TLS. Any other non-success HTTP
+status (401, 403, ...) is reported as a distinct, status-naming error
+rather than handed to the IPP decoder, so it cannot be confused with a
+response that arrived but failed to parse — `probe` treats that latter case
+as proof the device is present, and an explicit rejection is not that.
+
 ## 6. Architecture
 
 ### 6.1 Approaches considered

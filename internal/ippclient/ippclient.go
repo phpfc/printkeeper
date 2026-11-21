@@ -17,11 +17,37 @@ import (
 	"github.com/OpenPrinting/goipp"
 )
 
-// client is used for all requests. Printers serving ipps:// almost never
-// present a certificate signed by a trusted CA — it is self-signed by the
-// device itself — so, like every other IPP client (ipptool included),
-// verification is skipped. This is a diagnostic probe of a LAN device, not
-// a browser visiting an untrusted site.
+// client is used for every request this package sends, to a printer or to
+// this machine's own cupsd alike.
+//
+// The certificate verification decision: this client never checks a
+// server certificate. That is a deliberate trade-off, not an oversight,
+// and it is scoped as narrowly as this package can make it:
+//
+//   - It only ever matters for printer connections. CupsGetPrinters talks
+//     exclusively to cupsBaseURI ("ipp://localhost:631/", see
+//     internal/queue), which is plain HTTP and never negotiates TLS at
+//     all — this setting has no effect on that traffic.
+//   - Real printers — including the one this task was filed against —
+//     serve ipps:// with a certificate self-signed by the device itself;
+//     there is no CA to validate against. CUPS itself trusts a printer's
+//     certificate on first use for the same reason. ipptool, which reads
+//     these same devices without complaint, does not verify either.
+//   - printkeeper sends no credentials over this connection: only
+//     attribute queries, and later, print jobs the user themselves
+//     initiated. A spoofed printer could at most lie about its own
+//     attributes or receive a document the user already chose to print
+//     to it — not exfiltrate a secret.
+//   - A narrower scope — skip verification only on the retry performed
+//     after a 426 Upgrade Required, in sendRequest below — was
+//     considered and rejected: discovered printers can advertise an
+//     ipps:// URI directly (see internal/discovery), with no 426 dance
+//     and no retry to scope the exemption to. Limiting this to the retry
+//     path alone would leave every such device unreadable, which is the
+//     same failure this task exists to fix.
+//
+// The alternative is printkeeper simply not working against a large
+// class of real printers, which is a worse outcome than this.
 var client = &http.Client{
 	Transport: &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
@@ -44,6 +70,24 @@ func (e *MalformedResponseError) Error() string { return e.err.Error() }
 
 // Unwrap exposes the underlying decode error to errors.Is / errors.As.
 func (e *MalformedResponseError) Unwrap() error { return e.err }
+
+// HTTPStatusError means the device's HTTP transport rejected the request
+// outright — a status other than success and other than 426 Upgrade
+// Required (which sendRequest handles itself, see below) — before any
+// attempt was made to decode a body as IPP. A 401 or 403 is a rejection,
+// not a garbled response: unlike MalformedResponseError, this type must
+// never be read by a caller as "bytes arrived, so the device is merely
+// unwell" — probe, in particular, relies on that boundary staying clean.
+type HTTPStatusError struct {
+	URI        string
+	StatusCode int
+}
+
+// Error names the URI and the rejecting status, e.g. "ipp request to
+// ipp://printer.local/ipp/print: unexpected http status 401 Unauthorized".
+func (e *HTTPStatusError) Error() string {
+	return fmt.Sprintf("ipp request to %s: unexpected http status %d %s", e.URI, e.StatusCode, http.StatusText(e.StatusCode))
+}
 
 // GetPrinterAttributes sends a Get-Printer-Attributes request to uri asking
 // for the given attribute keywords (use []string{"all"} for everything the
@@ -145,29 +189,55 @@ func requestedAttributesValue(requested []string) goipp.Attribute {
 	return attr
 }
 
-// sendRequest encodes req, POSTs it to uri, and decodes the response
-// into an IPP message. It is the one place that knows how to perform
-// that HTTP round trip; every operation in this package builds on it
-// instead of repeating the encode/post/decode sequence itself.
+// sendRequest encodes req, POSTs it to uri, and decodes the response into
+// an IPP message. It is the one place that knows how to perform that HTTP
+// round trip; every operation in this package builds on it instead of
+// repeating the encode/post/decode sequence itself.
+//
+// Before decoding, it inspects the HTTP status. Some real printers —
+// the one this task was filed against among them — refuse plaintext IPP
+// on their well-known port outright, answering 426 Upgrade Required with
+// an empty body instead of anything resembling IPP; ipptool reads the
+// same devices without trouble only because CUPS's HTTP layer performs
+// the upgrade underneath it. So a 426 here triggers exactly one retry of
+// the identical request against https://host:port/path — the same
+// host:port the original URI named, not a different endpoint — before
+// giving up. Any other non-success status is reported as HTTPStatusError
+// rather than handed to the decoder: an empty or unexpected body for a
+// 401 or 403 would otherwise decode-fail and look exactly like
+// MalformedResponseError's "bytes arrived but didn't parse" case, which
+// would mislead callers like probe that treat that error as proof the
+// device is present.
 func sendRequest(ctx context.Context, uri string, req *goipp.Message) (*goipp.Message, time.Duration, error) {
 	payload, err := req.EncodeBytes()
 	if err != nil {
 		return nil, 0, fmt.Errorf("encode ipp request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, toHTTPURL(uri), bytes.NewReader(payload))
-	if err != nil {
-		return nil, 0, fmt.Errorf("build http request: %w", err)
-	}
-	httpReq.Header.Set("Content-Type", goipp.ContentType)
-
 	start := time.Now()
-	resp, err := client.Do(httpReq)
-	rtt := time.Since(start)
+	resp, err := postIPP(ctx, toHTTPURL(uri), payload)
 	if err != nil {
-		return nil, rtt, fmt.Errorf("ipp request to %s: %w", uri, err)
+		return nil, time.Since(start), fmt.Errorf("ipp request to %s: %w", uri, err)
 	}
+
+	if resp.StatusCode == http.StatusUpgradeRequired {
+		resp.Body.Close()
+
+		httpsURL, convErr := toHTTPSURL(uri)
+		if convErr != nil {
+			return nil, time.Since(start), fmt.Errorf("ipp request to %s: %w", uri, convErr)
+		}
+		resp, err = postIPP(ctx, httpsURL, payload)
+		if err != nil {
+			return nil, time.Since(start), fmt.Errorf("ipp request to %s: retry over tls: %w", uri, err)
+		}
+	}
+	rtt := time.Since(start)
 	defer resp.Body.Close()
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return nil, rtt, &HTTPStatusError{URI: uri, StatusCode: resp.StatusCode}
+	}
 
 	var msg goipp.Message
 	if err := msg.Decode(resp.Body); err != nil {
@@ -175,6 +245,17 @@ func sendRequest(ctx context.Context, uri string, req *goipp.Message) (*goipp.Me
 	}
 
 	return &msg, rtt, nil
+}
+
+// postIPP sends payload as an IPP-typed POST to url and returns the raw
+// HTTP response, unexamined — callers decide what each status means.
+func postIPP(ctx context.Context, url string, payload []byte) (*http.Response, error) {
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
+	if err != nil {
+		return nil, fmt.Errorf("build http request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", goipp.ContentType)
+	return client.Do(httpReq)
 }
 
 // toHTTPURL rewrites an ipp(s):// printer URI to the http(s):// URL IPP is
@@ -191,4 +272,18 @@ func toHTTPURL(uri string) string {
 		u.Scheme = "https"
 	}
 	return u.String()
+}
+
+// toHTTPSURL rewrites uri to an https:// URL on the identical host:port
+// and path, regardless of uri's original scheme. It is used only for the
+// retry sendRequest performs after a 426 Upgrade Required: the device
+// that refused plaintext is asked again, over TLS, at the same address —
+// never a different host or port the device did not name.
+func toHTTPSURL(uri string) (string, error) {
+	u, err := url.Parse(uri)
+	if err != nil {
+		return "", fmt.Errorf("parse uri %s: %w", uri, err)
+	}
+	u.Scheme = "https"
+	return u.String(), nil
 }
