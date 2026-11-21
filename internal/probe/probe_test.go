@@ -139,6 +139,37 @@ func ippStub(t *testing.T, body []byte) string {
 	return "ipp://" + srv.Listener.Addr().String() + "/ipp/print"
 }
 
+// httpStatusStub starts an HTTP server that answers every request with
+// the given non-success HTTP status and an empty body, standing in for a
+// printer that explicitly rejects a request at the HTTP layer — busy, or
+// demanding credentials — rather than mishandling it. It returns an
+// ipp:// URI pointing at the stub.
+func httpStatusStub(t *testing.T, status int) string {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(status)
+	}))
+	t.Cleanup(srv.Close)
+	return "ipp://" + srv.Listener.Addr().String() + "/ipp/print"
+}
+
+// TestProbeNonSuccessHTTPStatusIsErroredNotAbsent closes the gap
+// ippclient.HTTPStatusError opened: a printer that rejects a request at
+// the HTTP layer (503 busy, 401 wanting credentials, ...) still sent a
+// response. Bytes came back, so it is present — StateErrored, never
+// StateAbsent. Getting this backwards is exactly what the
+// absent/errored boundary exists to prevent: a busy or credential-gated
+// printer reported as absent would have the repair ladder conclude it
+// moved and re-resolve it, potentially rewriting a healthy queue's
+// address over a printer that was never gone.
+func TestProbeNonSuccessHTTPStatusIsErroredNotAbsent(t *testing.T) {
+	uri := httpStatusStub(t, http.StatusServiceUnavailable)
+	r := probeWith(alwaysNetwork{}, context.Background(), uri, time.Second)
+	if r.State != StateErrored {
+		t.Fatalf("device rejecting with http status 503 reported %v (err=%v); want StateErrored — it responded, so it is present", r.State, r.Err)
+	}
+}
+
 // TestProbeNonSuccessIPPStatusIsErroredNotAbsent pins the heart of this
 // task: a device that answers over IPP but reports a non-success status
 // (here, server-error-device-error — exactly what a genuinely
