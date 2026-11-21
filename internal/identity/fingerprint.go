@@ -14,11 +14,15 @@ import (
 // of where it currently lives on the network. Two Fingerprints describe the
 // same physical printer when enough of these fields agree.
 //
-// MAC and DeviceID are not populated by FromCandidate: discovery.Candidate
-// carries neither (MAC comes from a later task's ARP resolution, DeviceID
-// from an IPP probe's printer-device-id attribute), so they stay their zero
-// value here. They exist on this type for whatever builds a richer stored
-// Fingerprint to compare against.
+// FromCandidate populates MAC only when UUID is an RFC 4122 version-1
+// UUID (see MACFromUUID) — discovery.Candidate carries no MAC of its own,
+// but a version-1 printer-uuid's node field already is one. DeviceID is
+// never populated by FromCandidate: discovery.Candidate carries no device
+// ID (it comes from an IPP probe's printer-device-id attribute instead),
+// so it stays its zero value here. Both exist on this type for whatever
+// builds a richer stored Fingerprint to compare against — DeviceID always,
+// and MAC for the devices whose UUID is not version 1, from
+// resolve.MACFor's ARP fallback.
 type Fingerprint struct {
 	UUID         string
 	MAC          string
@@ -35,6 +39,7 @@ type Fingerprint struct {
 func FromCandidate(c discovery.Candidate) Fingerprint {
 	return Fingerprint{
 		UUID:         normaliseUUID(c.UUID),
+		MAC:          MACFromUUID(c.UUID),
 		ServiceName:  c.ServiceName,
 		ResourcePath: c.ResourcePath,
 		PDLs:         c.PDLs,
