@@ -1,0 +1,484 @@
+{
+  "Candidate": {
+    "ServiceName": "",
+    "URI": "ipp://fake-e9668eb05069.example.invalid:631/ipp/print",
+    "UUID": "",
+    "Model": "",
+    "ResourcePath": "",
+    "PDLs": null,
+    "Host": "",
+    "Port": 0
+  },
+  "Attributes": {
+    "attributes-charset": [
+      "utf-8"
+    ],
+    "attributes-natural-language": [
+      "en"
+    ],
+    "charset-configured": [
+      "utf-8"
+    ],
+    "charset-supported": [
+      "utf-8"
+    ],
+    "color-supported": [
+      "true"
+    ],
+    "compression-supported": [
+      "none",
+      "gzip"
+    ],
+    "copies-default": [
+      "1"
+    ],
+    "copies-supported": [
+      "1-99"
+    ],
+    "document-format-default": [
+      "application/octet-stream"
+    ],
+    "document-format-preferred": [
+      "image/urf"
+    ],
+    "document-format-supported": [
+      "application/octet-stream",
+      "image/pwg-raster",
+      "image/urf",
+      "image/jpeg",
+      "application/vnd.epson.escpr"
+    ],
+    "document-format-varying-attributes": [
+      "copies",
+      "sides"
+    ],
+    "finishings-default": [
+      "3"
+    ],
+    "finishings-supported": [
+      "3"
+    ],
+    "generated-natural-language-supported": [
+      "en"
+    ],
+    "identify-actions-default": [
+      "flash"
+    ],
+    "identify-actions-supported": [
+      "flash"
+    ],
+    "ipp-features-supported": [
+      "wfds-print-1.0",
+      "airprint-1.8"
+    ],
+    "ipp-versions-supported": [
+      "1.0",
+      "1.1",
+      "2.0"
+    ],
+    "job-creation-attributes-supported": [
+      "copies",
+      "finishings",
+      "ipp-attribute-fidelity",
+      "job-name",
+      "media",
+      "media-col",
+      "orientation-requested",
+      "output-bin",
+      "print-quality",
+      "printer-resolution",
+      "sides",
+      "print-color-mode",
+      "print-content-optimize",
+      "print-scaling",
+      "job-mandatory-attributes"
+    ],
+    "jpeg-features-supported": [
+      "none"
+    ],
+    "jpeg-k-octets-supported": [
+      "0-16384"
+    ],
+    "jpeg-x-dimension-supported": [
+      "0-15000"
+    ],
+    "jpeg-y-dimension-supported": [
+      "1-15000"
+    ],
+    "landscape-orientation-requested-preferred": [
+      "5"
+    ],
+    "marker-colors": [
+      "#000000",
+      "#00FFFF",
+      "#FF00FF",
+      "#FFFF00"
+    ],
+    "marker-high-levels": [
+      "100",
+      "100",
+      "100",
+      "100"
+    ],
+    "marker-levels": [
+      "88",
+      "91",
+      "91",
+      "91"
+    ],
+    "marker-low-levels": [
+      "15",
+      "15",
+      "15",
+      "15"
+    ],
+    "marker-names": [
+      "Black ink",
+      "Cyan ink",
+      "Magenta ink",
+      "Yellow ink"
+    ],
+    "marker-types": [
+      "ink",
+      "ink",
+      "ink",
+      "ink"
+    ],
+    "media-bottom-margin-supported": [
+      "0",
+      "300"
+    ],
+    "media-col-default": [
+      "{media-size={x-dimension=21590 y-dimension=27940} media-top-margin=300 media-left-margin=300 media-right-margin=300 media-bottom-margin=300 media-type=stationery media-source=main}"
+    ],
+    "media-col-ready": [
+      "{media-size={x-dimension=21590 y-dimension=27940} media-top-margin=300 media-left-margin=300 media-right-margin=300 media-bottom-margin=300 media-type=stationery media-source=main}",
+      "{media-size={x-dimension=21590 y-dimension=27940} media-top-margin=0 media-left-margin=0 media-right-margin=0 media-bottom-margin=0 media-type=stationery media-source=main}"
+    ],
+    "media-col-supported": [
+      "media-size",
+      "media-top-margin",
+      "media-left-margin",
+      "media-right-margin",
+      "media-bottom-margin",
+      "media-type",
+      "media-source"
+    ],
+    "media-default": [
+      "na_letter_8.5x11in"
+    ],
+    "media-left-margin-supported": [
+      "0",
+      "300"
+    ],
+    "media-ready": [
+      "na_letter_8.5x11in"
+    ],
+    "media-right-margin-supported": [
+      "0",
+      "300"
+    ],
+    "media-size-supported": [
+      "{x-dimension=21590 y-dimension=27940}",
+      "{x-dimension=10160 y-dimension=15240}",
+      "{x-dimension=12700 y-dimension=17780}",
+      "{x-dimension=20320 y-dimension=25400}",
+      "{x-dimension=21000 y-dimension=29700}",
+      "{x-dimension=10500 y-dimension=14800}",
+      "{x-dimension=21590 y-dimension=35560}",
+      "{x-dimension=18415 y-dimension=26670}",
+      "{x-dimension=13970 y-dimension=21590}",
+      "{x-dimension=8890 y-dimension=12700}",
+      "{x-dimension=10477 y-dimension=24130}",
+      "{x-dimension=21590 y-dimension=33020}",
+      "{x-dimension=21590 y-dimension=34036}",
+      "{x-dimension=21500 y-dimension=31500}",
+      "{x-dimension=5400-21590 y-dimension=8600-120000}"
+    ],
+    "media-source-supported": [
+      "main"
+    ],
+    "media-supported": [
+      "na_letter_8.5x11in",
+      "na_index-4x6_4x6in",
+      "na_5x7_5x7in",
+      "na_govt-letter_8x10in",
+      "iso_a4_210x297mm",
+      "iso_a6_105x148mm",
+      "na_legal_8.5x14in",
+      "na_executive_7.25x10.5in",
+      "na_invoice_5.5x8.5in",
+      "oe_photo-l_3.5x5in",
+      "na_number-10_4.125x9.5in",
+      "na_foolscap_8.5x13in",
+      "na_oficio_8.5x13.4in",
+      "om_folio-sp_215x315mm",
+      "custom_min_54x86mm",
+      "custom_max_215.9x1200mm"
+    ],
+    "media-top-margin-supported": [
+      "0",
+      "300"
+    ],
+    "media-type-supported": [
+      "stationery",
+      "photographic-high-gloss",
+      "photographic",
+      "photographic-semi-gloss",
+      "photographic-glossy",
+      "photographic-matte",
+      "stationery-letterhead",
+      "envelope",
+      "stationery-coated"
+    ],
+    "mopria-certified": [
+      "2.0"
+    ],
+    "multiple-document-jobs-supported": [
+      "false"
+    ],
+    "multiple-operation-time-out": [
+      "120"
+    ],
+    "multiple-operation-time-out-action": [
+      "abort-job"
+    ],
+    "natural-language-configured": [
+      "en"
+    ],
+    "operations-supported": [
+      "2",
+      "4",
+      "5",
+      "6",
+      "8",
+      "9",
+      "10",
+      "11",
+      "59",
+      "60"
+    ],
+    "orientation-requested-default": [
+      "3"
+    ],
+    "orientation-requested-supported": [
+      "3"
+    ],
+    "output-bin-default": [
+      "face-up"
+    ],
+    "output-bin-supported": [
+      "face-up"
+    ],
+    "pages-per-minute": [
+      "4"
+    ],
+    "pages-per-minute-color": [
+      "9"
+    ],
+    "pdf-versions-supported": [
+      "none"
+    ],
+    "pdl-override-supported": [
+      "attempted"
+    ],
+    "print-color-mode-default": [
+      "auto"
+    ],
+    "print-color-mode-supported": [
+      "color",
+      "monochrome",
+      "auto-monochrome",
+      "process-monochrome",
+      "auto"
+    ],
+    "print-content-optimize-default": [
+      "auto"
+    ],
+    "print-content-optimize-supported": [
+      "auto"
+    ],
+    "print-quality-default": [
+      "4"
+    ],
+    "print-quality-supported": [
+      "4",
+      "5"
+    ],
+    "print-scaling-default": [
+      "auto"
+    ],
+    "print-scaling-supported": [
+      "auto",
+      "auto-fit",
+      "fill",
+      "fit",
+      "none"
+    ],
+    "printer-alert": [
+      "636f64653d6f74686572"
+    ],
+    "printer-alert-description": [
+      "idle"
+    ],
+    "printer-config-change-date-time": [
+      ""
+    ],
+    "printer-config-change-time": [
+      "42"
+    ],
+    "printer-current-time": [
+      "2026-11-21T12:40:58Z"
+    ],
+    "printer-device-id": [
+      "MFG:EPSON;CMD:ESCPL2,BDC,D4,D4PX,ESCPR1,END4,GENEP,PWGRaster,URF;MDL:L4260 Series;CLS:PRINTER;DES:EPSON L4260 Series;CID:EpsonRGB;FID:FXN,DPA,WFA,ETN,AFN,DAN,WRA;RID:30;DDS:022500;ELG:1162;SN:FAKEAF0659E203DF;URF:CP1,PQ4-5,OB9,OFU0,RS360,SRGB24,W8,DM3,IS1,V1.4,MT1-3-6-8-10-11-12;"
+    ],
+    "printer-dns-sd-name": [
+      "EPSON L4260 Series"
+    ],
+    "printer-firmware-name": [
+      "Firmware"
+    ],
+    "printer-firmware-string-version": [
+      "05.16.XJ05Q2"
+    ],
+    "printer-firmware-version": [
+      "3030303030353136303030305132303530303030303030303030303030303030"
+    ],
+    "printer-geo-location": [
+      ""
+    ],
+    "printer-get-attributes-supported": [
+      "document-format"
+    ],
+    "printer-icons": [
+      "https://fake-e9668eb05069.example.invalid:443/PRESENTATION/AIRPRINT/PRINTER_128.PNG",
+      "https://fake-e9668eb05069.example.invalid:443/PRESENTATION/AIRPRINT/PRINTER_512.PNG"
+    ],
+    "printer-info": [
+      "EPSON L4260 Series"
+    ],
+    "printer-input-tray": [
+      "747970653d7368656574466565644175746f4e6f6e52656d6f7661626c65547261793b64696d756e69743d6d6963726f6d65746572733b6d65646961666565643d3237393430303b6d6564696178666565643d3231353930303b6d617863617061636974793d2d323b6c6576656c3d2d323b7374617475733d303b6e616d653d52656172204175746f205368656574204665656465723b"
+    ],
+    "printer-is-accepting-jobs": [
+      "true"
+    ],
+    "printer-kind": [
+      "document",
+      "envelope",
+      "photo"
+    ],
+    "printer-location": [
+      ""
+    ],
+    "printer-make-and-model": [
+      "EPSON L4260 Series"
+    ],
+    "printer-more-info": [
+      "http://fake-e9668eb05069.example.invalid:80/PRESENTATION/BONJOUR"
+    ],
+    "printer-name": [
+      "ipp/print"
+    ],
+    "printer-organization": [
+      ""
+    ],
+    "printer-organizational-unit": [
+      ""
+    ],
+    "printer-output-tray": [
+      "747970653d756e52656d6f7661626c6542696e3b6d617863617061636974793d33303b72656d61696e696e673d2d333b7374617475733d303b6e616d653d466163652d757020547261793b737461636b696e676f726465723d6c617374546f46697273743b7061676564656c69766572793d6661636555703b"
+    ],
+    "printer-resolution-default": [
+      "360x360dpi"
+    ],
+    "printer-resolution-supported": [
+      "360x360dpi",
+      "720x720dpi",
+      "1440x720dpi",
+      "360x720dpi"
+    ],
+    "printer-state": [
+      "3"
+    ],
+    "printer-state-change-date-time": [
+      ""
+    ],
+    "printer-state-change-time": [
+      "4"
+    ],
+    "printer-state-reasons": [
+      "none"
+    ],
+    "printer-strings-languages-supported": [
+      "en",
+      "es-mx",
+      "pt",
+      "fr"
+    ],
+    "printer-strings-uri": [
+      "http://fake-e9668eb05069.example.invalid:80/LANGUAGES/IPP?LANG=en"
+    ],
+    "printer-supply-info-uri": [
+      "http://fake-e9668eb05069.example.invalid:80/PRESENTATION/HTML/TOP/PRTINFO.HTML"
+    ],
+    "printer-up-time": [
+      "67539"
+    ],
+    "printer-uri-supported": [
+      "ipps://fake-e9668eb05069.example.invalid:631/ipp/print",
+      "ipp://fake-e9668eb05069.example.invalid:631/ipp/print"
+    ],
+    "printer-uuid": [
+      "urn:uuid:6848713e-ddb7-639f-3a9a-8ca5771cd65e"
+    ],
+    "pwg-raster-document-resolution-supported": [
+      "360x360dpi"
+    ],
+    "pwg-raster-document-sheet-back": [
+      "rotated"
+    ],
+    "pwg-raster-document-type-supported": [
+      "sgray_8",
+      "srgb_8"
+    ],
+    "queued-job-count": [
+      "0"
+    ],
+    "sides-default": [
+      "one-sided"
+    ],
+    "sides-supported": [
+      "one-sided",
+      "two-sided-short-edge",
+      "two-sided-long-edge"
+    ],
+    "urf-supported": [
+      "CP1",
+      "PQ4-5",
+      "OB9",
+      "OFU0",
+      "RS360",
+      "SRGB24",
+      "W8",
+      "DM3",
+      "IS1",
+      "V1.4",
+      "MT1-3-6-8-10-11-12"
+    ],
+    "uri-authentication-supported": [
+      "none",
+      "none"
+    ],
+    "uri-security-supported": [
+      "tls",
+      "none"
+    ],
+    "which-jobs-supported": [
+      "completed",
+      "not-completed"
+    ]
+  },
+  "RoundTrip": 780861584
+}

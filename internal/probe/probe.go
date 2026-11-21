@@ -136,6 +136,18 @@ func probeWith(nc networkChecker, ctx context.Context, uri string, timeout time.
 			return Result{State: StateErrored, RTT: rtt, Err: err}
 		}
 
+		var httpStatus *ippclient.HTTPStatusError
+		if errors.As(err, &httpStatus) {
+			// An HTTP status is still a response: something answered the
+			// connection and said so explicitly — busy, forbidden, wants
+			// credentials. That is "there, but it said no", not "gone".
+			// Classifying it as absent would have the repair ladder
+			// conclude a busy or credential-gated printer moved and
+			// re-resolve it, which is the failure this boundary exists
+			// to prevent.
+			return Result{State: StateErrored, RTT: rtt, Err: err}
+		}
+
 		state := StateAbsent
 		if !nc.HasNetwork() {
 			state = StateUnknown

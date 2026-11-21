@@ -610,3 +610,93 @@ Run: `launchctl bootstrap gui/$(id -u) packaging/darwin/io.github.phpfc.printkee
 git add cmd/printkeeperd internal/ipc internal/daemon packaging cmd/printkeeper
 git commit -m "feat(daemon): add launchd agent with ipc and probe scheduling"
 ```
+
+---
+
+### Task 5b: TLS upgrade for printer connections
+
+Inserted after Task 5, ahead of Task 6, by controller ruling on 2026-11-21. Not part of
+the original plan: pointing `printkeeper inspect` at the first real printer available on
+the network failed outright, and every later task's real-hardware verification depends
+on this working.
+
+**The measurement.** `go run ./cmd/printkeeper inspect ipp://EPSON00973D.local:631/ipp/print`
+returned `decode ipp response: Message truncated at 0x0`. `curl` against the same
+endpoint explains it: the printer answers `HTTP/1.1 426 Upgrade Required` with
+`Upgrade: TLS/1.0, HTTP/1.1` and `Content-Length: 0`. It refuses plaintext IPP on port
+631. `ipptool` reads the same printer without trouble because CUPS's HTTP layer performs
+the upgrade transparently. `internal/ippclient` never inspects the HTTP status code, so
+it hands an empty body to the decoder.
+
+**Why it matters beyond `inspect`.** `probe` classifies this healthy printer as
+`StateErrored` — bytes arrived, undecodable. That is the correct side of the
+absent/errored boundary, so the repair ladder will not rewrite a healthy queue's
+address over it, but the printer is reported as broken when it is fine.
+`queue.List` is unaffected: localhost cupsd demands no upgrade.
+
+**Files:**
+- Modify: `internal/ippclient/ippclient.go`
+- Modify: `docs/superpowers/specs/2026-11-20-printkeeper-design.md` (§5 constraints — the design never mentions TLS)
+- Test: `internal/ippclient/ippclient_test.go`, `internal/ippclient/ippclient_integration_test.go`
+
+**Interfaces:**
+- Produces: no new exported surface. `GetPrinterAttributes` and `CupsGetPrinters` keep their signatures; the upgrade happens beneath them.
+
+- [ ] **Step 1: Write the failing test for the 426 path**
+
+An `httptest.Server` that answers the first request with `426 Upgrade Required`, an
+`Upgrade: TLS/1.0, HTTP/1.1` header and an empty body, and serves a valid IPP response
+over TLS on retry. Assert the client returns the decoded attributes rather than a
+decode error. Use `httptest.NewTLSServer` for the TLS leg and point the client at the
+plaintext endpoint first.
+
+- [ ] **Step 2: Run it and confirm it fails**
+
+Run: `go test ./internal/ippclient/ -run Upgrade -v`
+Expected: FAIL with a truncated-message decode error — the same symptom the real printer produced.
+
+- [ ] **Step 3: Implement the upgrade**
+
+Inspect the HTTP status before decoding. On `426`, retry the identical request against
+`https://host:port/path`. Certificate verification is disabled **for printer
+connections only** — printers ship self-signed certificates, CUPS itself trusts them on
+first use, and printkeeper sends no credentials to a printer, only attribute queries.
+Document that trade-off at the call site, not only in the design doc. Any non-success
+status that is not `426` becomes an error naming the status, so a `401` or `403` stops
+looking like a malformed response.
+
+- [ ] **Step 4: Run it and confirm it passes**
+
+Run: `go test ./internal/ippclient/ -run Upgrade -v`
+Expected: PASS
+
+- [ ] **Step 5: Write the failing test for non-426 failure statuses**
+
+Assert a `401` and a `503` each produce an error that names the status and is
+distinguishable from `MalformedResponseError`, since `probe` maps the latter to
+`StateErrored` on the grounds that bytes arrived.
+
+- [ ] **Step 6: Run, implement, run**
+
+Run: `go test ./internal/ippclient/ -v`
+Expected: PASS
+
+- [ ] **Step 7: Verify against the real printer**
+
+Run: `go run ./cmd/printkeeper inspect --json ipp://EPSON00973D.local:631/ipp/print`
+Expected: a report, and an anonymised fixture. **Read the fixture before committing it**
+and confirm the real serial (`SN:` inside `printer-device-id`), the real UUID and the
+real hostname are all absent — that check has never been run against real-hardware data,
+only against simulator output.
+
+- [ ] **Step 8: Update the design document**
+
+Add to §5 Constraints that real printers may refuse plaintext IPP and require an in-place
+TLS upgrade, with the certificate-verification decision and its reasoning.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add internal/ippclient docs testdata
+git commit -m "fix(ipp): upgrade to TLS when the printer requires it"
+```
