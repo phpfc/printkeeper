@@ -81,17 +81,26 @@ func (a Action) String() string {
 	}
 }
 
-// Decision is the ladder's verdict for one adopted printer. Target is
-// the single candidate to repair onto (set for ActionRepairSilently and
-// ActionRepairAndRecord only); Choices lists every candidate the user
-// must be asked to pick between (ActionAsk only). Reason is a short,
-// human-oriented explanation — rendering what resolve attempted, if
-// anything, is the CLI's job, not this package's.
+// Decision is the ladder's verdict for one adopted printer. QueueName
+// identifies which queue the decision is about — populated from the
+// store.Adopted passed to Decide, so a Decision is self-describing
+// regardless of whether it came from Decide directly or from Sweep.
+// This matters because a Decision's payload is an instruction to
+// rewrite a specific queue's device address: a caller that had to
+// re-associate a Decision with a queue by its position in a returned
+// slice would silently repair the wrong queue the moment anything
+// changed how that slice was filtered. Target is the single candidate
+// to repair onto (set for ActionRepairSilently and ActionRepairAndRecord
+// only); Choices lists every candidate the user must be asked to pick
+// between (ActionAsk only). Reason is a short, human-oriented
+// explanation — rendering what resolve attempted, if anything, is the
+// CLI's job, not this package's.
 type Decision struct {
-	Action  Action
-	Target  discovery.Candidate
-	Choices []discovery.Candidate
-	Reason  string
+	QueueName string
+	Action    Action
+	Target    discovery.Candidate
+	Choices   []discovery.Candidate
+	Reason    string
 }
 
 // ThresholdExact, ThresholdPartial, and AbandonAfter are the ladder's
@@ -132,7 +141,12 @@ const sweepProbeTimeout = 5 * time.Second
 // (StateErrored) has not moved — only StateAbsent is evidence worth
 // acting on. StateUnknown means the machine itself could not ask, which
 // is not a finding about the printer at all; both get ActionNothing.
-func Decide(a store.Adopted, p probe.Result, matches []identity.Scored, now time.Time) Decision {
+func Decide(a store.Adopted, p probe.Result, matches []identity.Scored, now time.Time) (d Decision) {
+	// Every return below builds a Decision without repeating
+	// QueueName at each site; this defer is what makes a Decision
+	// self-describing regardless of which branch produced it.
+	defer func() { d.QueueName = a.QueueName }()
+
 	switch p.State {
 	case probe.StatePresent:
 		return Decision{Action: ActionNothing, Reason: "printer answered; no repair needed"}

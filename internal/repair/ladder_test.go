@@ -373,3 +373,108 @@ func TestSweepProducesNoDecisionForAdoptedEntryMissingItsQueue(t *testing.T) {
 		t.Fatalf("got %d decisions for an adopted printer with no matching queue; want 0", len(decisions))
 	}
 }
+
+// TestDecideSetsQueueNameFromAdopted pins that a Decision is
+// self-describing even from a direct Decide call, not only through
+// Sweep: a Decision's QueueName must always come from the
+// store.Adopted it was decided about, regardless of entry point.
+func TestDecideSetsQueueNameFromAdopted(t *testing.T) {
+	adopted := store.Adopted{QueueName: "Reception_Printer", Fingerprint: identity.Fingerprint{}, LastSeen: recentlySeen()}
+
+	d := Decide(adopted, probe.Result{State: probe.StatePresent}, nil, fixedNow)
+	if d.QueueName != "Reception_Printer" {
+		t.Fatalf("Decision.QueueName = %q, want %q", d.QueueName, "Reception_Printer")
+	}
+}
+
+// TestSweepDecisionsAreSelfDescribingByQueueName is the fix for the
+// positional-association defect: a Decision's payload is an
+// instruction to rewrite a specific queue's device address, so a
+// caller must never have to re-associate a Decision with a queue by
+// its position in Sweep's returned slice — the moment any filtering
+// detail shifted that position, the tool would repair queue A using
+// queue B's address, which is this project's first anti-goal arriving
+// through an index.
+//
+// A fixture with a single queue cannot catch positional drift: index 0
+// is trivially "correct" whether or not the association logic is
+// right. This uses three adopted queues, each probed to a different,
+// distinguishable Action, fed to Sweep in an order that does not match
+// either the adopted slice's order or any other convenient ordering —
+// so the only way to pass is for each returned Decision to carry the
+// QueueName it is actually about.
+func TestSweepDecisionsAreSelfDescribingByQueueName(t *testing.T) {
+	refused := "ipp://127.0.0.1:1/ipp/print" // nothing listens on port 1: instant refusal, deterministic StateAbsent
+
+	// Printer One: absent with a genuine UUID match -> ActionRepairSilently.
+	uuidOne := "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee" // version 4: never MAC-derived, so it cannot accidentally score against anything below
+	candidateOne := discovery.Candidate{ServiceName: "Candidate One", UUID: uuidOne}
+
+	// Printer Two: absent with one partial (MAC-only) match -> ActionRepairAndRecord.
+	// candidateTwo's UUID is version 1 (version nibble "1" in "11ec"); its node
+	// field, e0bb9e00973d, is exactly the MAC printerTwo's fingerprint carries —
+	// see identity.MACFromUUID. Its own UUID does not match anything stored, so
+	// only WeightMAC (60) is contributed, never WeightUUID.
+	candidateTwo := discovery.Candidate{ServiceName: "Candidate Two", UUID: "11111111-2222-11ec-8000-e0bb9e00973d"}
+
+	// Printer Three: absent, nothing plausible, abandoned long past
+	// AbandonAfter -> ActionLetGo. It shares no field with either
+	// candidate above, so it scores 0 against both.
+
+	queues := []queue.Queue{
+		{Name: "Printer_Three", DeviceURI: refused},
+		{Name: "Printer_One", DeviceURI: refused},
+		{Name: "Printer_Two", DeviceURI: refused},
+	}
+
+	adopted := []store.Adopted{
+		{
+			QueueName:   "Printer_Two",
+			Fingerprint: identity.Fingerprint{MAC: "e0:bb:9e:00:97:3d"},
+			LastSeen:    recentlySeen(),
+		},
+		{
+			QueueName:   "Printer_Three",
+			Fingerprint: identity.Fingerprint{ServiceName: "Printer Three Only", ResourcePath: "printer-three/only"},
+			LastSeen: map[string]store.Seen{
+				"home": {URI: "ipp://192.168.1.60/ipp/print", At: fixedNow.Add(-(AbandonAfter + time.Hour))},
+			},
+		},
+		{
+			QueueName:   "Printer_One",
+			Fingerprint: identity.Fingerprint{UUID: uuidOne},
+			LastSeen:    recentlySeen(),
+		},
+	}
+
+	candidates := []discovery.Candidate{candidateOne, candidateTwo}
+
+	decisions := Sweep(context.Background(), queues, adopted, candidates, fixedNow)
+
+	if len(decisions) != 3 {
+		t.Fatalf("got %d decisions, want 3", len(decisions))
+	}
+
+	byName := make(map[string]Decision, len(decisions))
+	for _, d := range decisions {
+		if _, dup := byName[d.QueueName]; dup {
+			t.Fatalf("duplicate QueueName %q among decisions: %+v", d.QueueName, decisions)
+		}
+		byName[d.QueueName] = d
+	}
+
+	want := map[string]Action{
+		"Printer_One":   ActionRepairSilently,
+		"Printer_Two":   ActionRepairAndRecord,
+		"Printer_Three": ActionLetGo,
+	}
+	for name, wantAction := range want {
+		d, ok := byName[name]
+		if !ok {
+			t.Fatalf("no decision carried QueueName %q; got %+v", name, decisions)
+		}
+		if d.Action != wantAction {
+			t.Fatalf("decision for %q = %v, want %v (reason: %q) — a wrong action paired with the wrong name is exactly how this tool would repair the wrong printer", name, d.Action, wantAction, d.Reason)
+		}
+	}
+}
