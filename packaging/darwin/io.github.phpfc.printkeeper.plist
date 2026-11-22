@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  launchd user agent for printkeeperd, the printkeeper daemon.
+
+  This file is a TEMPLATE: every __HOME__ below must be substituted
+  with your own home directory before installing it — launchd cannot
+  expand "~" or "$HOME" inside ProgramArguments/StandardOutPath/
+  StandardErrorPath itself, so this has to happen before the plist
+  reaches launchctl. See packaging/darwin/README.md for the one-line
+  command that does this and installs the result.
+
+  ProgramArguments points at printkeeperd under this user's own
+  Application Support directory, alongside everything else printkeeper
+  already keeps there (the adopted-printer store, the IPC socket) — a
+  location that never needs admin rights to write to, unlike
+  /usr/local/bin. Whoever installs this is expected to have already put
+  the built binary at that path; this plist does not build or copy it.
+
+  RunAtLoad starts the daemon the moment it is bootstrapped (and again
+  on every login), matching spec §6.6's "event-driven first... on
+  daemon start". KeepAlive.SuccessfulExit=false means launchd restarts
+  it after a crash (non-zero exit) but leaves it stopped after a clean,
+  deliberate exit(0) — the standard idiom for a long-running agent that
+  should come back from a crash without fighting a real shutdown.
+
+  ThrottleInterval caps how often launchd will restart a crashing job:
+  without it, a daemon that exits non-zero on every single start (a
+  corrupted store, a permissions problem on its own directory) gets
+  relaunched at launchd's own default cadence forever — exactly the
+  "constant wakeups" anti-goal this whole daemon is framed around,
+  left unguarded in the one failure mode most likely to produce it. 60
+  seconds is generous enough that a genuine crash loop costs this
+  machine almost nothing, while still recovering within a minute of
+  whatever caused it being fixed.
+
+  Nothing here raises a user notification on success or failure: spec's
+  rule that a successful repair stays silent applies just as much to a
+  daemon with no terminal as it does to the CLI, and the standard
+  streams below only ever go to this agent's own log files, never to a
+  visible UI.
+-->
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>io.github.phpfc.printkeeper</string>
+
+	<key>ProgramArguments</key>
+	<array>
+		<string>__HOME__/Library/Application Support/printkeeper/bin/printkeeperd</string>
+	</array>
+
+	<key>RunAtLoad</key>
+	<true/>
+
+	<key>KeepAlive</key>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
+
+	<key>ThrottleInterval</key>
+	<integer>60</integer>
+
+	<key>ProcessType</key>
+	<string>Background</string>
+
+	<key>StandardOutPath</key>
+	<string>__HOME__/Library/Logs/printkeeper/agent.out.log</string>
+
+	<key>StandardErrorPath</key>
+	<string>__HOME__/Library/Logs/printkeeper/agent.err.log</string>
+</dict>
+</plist>
