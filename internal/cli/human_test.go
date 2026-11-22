@@ -9,28 +9,22 @@ import (
 	"github.com/phpfc/printkeeper/internal/probe"
 	"github.com/phpfc/printkeeper/internal/repair"
 	"github.com/phpfc/printkeeper/internal/resolve"
+	"github.com/phpfc/printkeeper/internal/vocabulary"
 )
 
-// forbiddenVocabulary is spec §4's third anti-goal, verbatim: no domain
-// vocabulary reaches the user, not even in an error message. These are
-// checked case-sensitively — an ordinary English word such as "cups of
-// coffee" must never trip this check, only the acronym/scheme itself.
-var forbiddenVocabulary = []string{"ipp://", "IPP", "mDNS", "CUPS", "URI"}
-
-// assertNoDomainVocabulary scans s for every forbidden term, plus
-// "queue" case-insensitively (a sanitised CUPS queue name is always
-// already lower-case, so a case-sensitive check alone would miss a
-// literal raw name leaking through).
+// assertNoDomainVocabulary is spec §4's third anti-goal, verbatim: no
+// domain vocabulary reaches the user, not even in an error message.
+// It is a thin wrapper over internal/vocabulary, kept under this
+// package's own established name so every existing call site in
+// adopt_test.go, doctor_test.go, and heal_test.go needed no change —
+// the list and the logic itself now live in one place shared by every
+// package that renders user-facing text, internal/ipc included, not
+// duplicated per package. See internal/vocabulary's own doc comment
+// for why that package exists at all: this one, scoped to internal/cli,
+// is exactly what let a leak in internal/ipc's own text go unnoticed.
 func assertNoDomainVocabulary(t *testing.T, s string) {
 	t.Helper()
-	for _, term := range forbiddenVocabulary {
-		if strings.Contains(s, term) {
-			t.Errorf("rendered output leaked domain vocabulary %q: %q", term, s)
-		}
-	}
-	if strings.Contains(strings.ToLower(s), "queue") {
-		t.Errorf("rendered output leaked domain vocabulary %q: %q", "queue", s)
-	}
+	vocabulary.Assert(t, s)
 }
 
 // adversarialCandidate is a discovery.Candidate whose every field except
