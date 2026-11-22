@@ -11,6 +11,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -22,6 +23,7 @@ import (
 	"github.com/phpfc/printkeeper/internal/cli"
 	"github.com/phpfc/printkeeper/internal/discovery"
 	"github.com/phpfc/printkeeper/internal/inspect"
+	"github.com/phpfc/printkeeper/internal/ipc"
 	"github.com/phpfc/printkeeper/internal/resolve"
 	"github.com/phpfc/printkeeper/internal/store"
 )
@@ -69,6 +71,11 @@ func usage() {
 // runAdopt implements `printkeeper adopt`: the only command that ever
 // asks the user to type anything, and the only thing it asks for is a
 // small number picked from a list of human-readable printer names.
+// Unlike doctor and heal, this never prefers the daemon: it is the one
+// command that reads from a terminal (os.Stdin), and the daemon's IPC
+// protocol carries a single JSON request, not an interactive stream —
+// see internal/ipc's own handling of the "adopt" method, which always
+// declines for exactly this reason. It always runs in-process.
 func runAdopt(args []string) error {
 	app, err := newApp()
 	if err != nil {
@@ -80,8 +87,20 @@ func runAdopt(args []string) error {
 }
 
 // runDoctor implements `printkeeper doctor`: a direct, always-reported
-// health check of every adopted printer.
+// health check of every adopted printer. It prefers asking a running
+// daemon over the IPC socket — the daemon's own view is at least as
+// fresh, and this spares a printer two cold-start network round trips
+// instead of one — and falls back to running the same check in-process
+// whenever no daemon answers.
 func runDoctor(args []string) error {
+	if output, ok, err := runViaDaemon("status"); ok {
+		if err != nil {
+			return err
+		}
+		fmt.Print(output)
+		return nil
+	}
+
 	app, err := newApp()
 	if err != nil {
 		return err
@@ -93,8 +112,18 @@ func runDoctor(args []string) error {
 
 // runHeal implements `printkeeper heal`: run the repair confidence
 // ladder against every adopted printer and act on what it decides. A
-// successful repair writes nothing — spec §2 goal 3.
+// successful repair writes nothing — spec §2 goal 3. Like runDoctor, it
+// prefers a running daemon over the socket and falls back to running
+// in-process when none answers.
 func runHeal(args []string) error {
+	if output, ok, err := runViaDaemon("heal"); ok {
+		if err != nil {
+			return err
+		}
+		fmt.Print(output)
+		return nil
+	}
+
 	app, err := newApp()
 	if err != nil {
 		return err
@@ -102,6 +131,58 @@ func runHeal(args []string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), healTimeout)
 	defer cancel()
 	return app.Heal(ctx)
+}
+
+// runViaDaemon attempts method ("status" or "heal") against a running
+// daemon's socket. ok is false whenever no daemon answered at all — a
+// missing socket (nothing running), a refused connection (a stale
+// socket file left by a daemon that crashed), a connection that
+// accepted but then went silent or dropped mid-request, a read that
+// hit the client's own deadline (internal/ipc.Client never blocks
+// forever; see its doc comment) — anything internal/ipc.TransportError
+// wraps — in which case the caller falls back to running the same
+// command in-process; none of those are reported as errors, since
+// "the daemon didn't answer" is indistinguishable, from the user's own
+// point of view, from "there is no daemon right now", which is itself
+// the ordinary, expected case for anyone who has not installed the
+// launchd agent. A reviewer's finding was that this used to only be
+// true for Dial itself: once a daemon had been successfully dialled,
+// any later failure — including a transport failure that looks
+// exactly like no daemon at all — was treated as a real error instead
+// of falling back, which defeated the entire point of preferring the
+// daemon when one answers and running in-process when one doesn't.
+//
+// Once the daemon has genuinely *answered* — even with an
+// application-level failure carried in Response.Error, not a
+// transport one — that answer is real and is returned rather than
+// silently swallowed into another in-process attempt that would just
+// repeat the same failure.
+func runViaDaemon(method string) (output string, ok bool, err error) {
+	path, pathErr := socketPath()
+	if pathErr != nil {
+		return "", false, nil
+	}
+
+	client, dialErr := ipc.Dial(path)
+	if dialErr != nil {
+		return "", false, nil
+	}
+	defer client.Close()
+
+	switch method {
+	case "status":
+		output, err = client.Status()
+	case "heal":
+		output, err = client.Heal()
+	default:
+		return "", false, nil
+	}
+
+	var transportErr *ipc.TransportError
+	if errors.As(err, &transportErr) {
+		return "", false, nil
+	}
+	return output, true, err
 }
 
 // adoptTimeout, doctorTimeout, and healTimeout bound each command's
@@ -144,6 +225,19 @@ func storePath() (string, error) {
 		return "", fmt.Errorf("find the current user's home directory: %w", err)
 	}
 	return filepath.Join(home, "Library", "Application Support", "printkeeper", "adopted.json"), nil
+}
+
+// socketPath returns where the daemon's IPC socket lives if one is
+// running: the same per-user Application Support directory storePath
+// uses, so both binaries agree on one location without either
+// importing the other's unexported path logic (cmd/printkeeperd
+// computes this identically in its own appSupportDir).
+func socketPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("find the current user's home directory: %w", err)
+	}
+	return filepath.Join(home, "Library", "Application Support", "printkeeper", "sock"), nil
 }
 
 // runInspect implements `printkeeper inspect [--json] [uri]`. With no uri
