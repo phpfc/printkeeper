@@ -1,7 +1,11 @@
-// Command printkeeper is the CLI client for the printkeeper daemon. Today
-// it carries only "inspect", the validation tool that captures everything
+// Command printkeeper is the CLI client for the printkeeper daemon. It
+// carries "inspect", the validation tool that captures everything
 // knowable about a real printer so identity-matching weights can be
-// designed against measured data rather than guessed field shapes.
+// designed against measured data rather than guessed field shapes, and
+// the three commands a person actually runs day to day: "adopt" (choose
+// a printer to protect, from a numbered list — never by typing an
+// address), "doctor" (check on adopted printers), and "heal" (repair any
+// that moved).
 package main
 
 import (
@@ -15,8 +19,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/phpfc/printkeeper/internal/cli"
 	"github.com/phpfc/printkeeper/internal/discovery"
 	"github.com/phpfc/printkeeper/internal/inspect"
+	"github.com/phpfc/printkeeper/internal/resolve"
+	"github.com/phpfc/printkeeper/internal/store"
 )
 
 const (
@@ -35,6 +42,12 @@ func main() {
 	switch os.Args[1] {
 	case "inspect":
 		err = runInspect(os.Args[2:])
+	case "adopt":
+		err = runAdopt(os.Args[2:])
+	case "doctor":
+		err = runDoctor(os.Args[2:])
+	case "heal":
+		err = runHeal(os.Args[2:])
 	case "-h", "--help", "help":
 		usage()
 		return
@@ -50,7 +63,87 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: printkeeper inspect [--json] [uri]")
+	fmt.Fprintln(os.Stderr, "usage: printkeeper <adopt|doctor|heal|inspect> [--json] [uri]")
+}
+
+// runAdopt implements `printkeeper adopt`: the only command that ever
+// asks the user to type anything, and the only thing it asks for is a
+// small number picked from a list of human-readable printer names.
+func runAdopt(args []string) error {
+	app, err := newApp()
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), adoptTimeout)
+	defer cancel()
+	return app.Adopt(ctx, os.Stdin)
+}
+
+// runDoctor implements `printkeeper doctor`: a direct, always-reported
+// health check of every adopted printer.
+func runDoctor(args []string) error {
+	app, err := newApp()
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), doctorTimeout)
+	defer cancel()
+	return app.Doctor(ctx)
+}
+
+// runHeal implements `printkeeper heal`: run the repair confidence
+// ladder against every adopted printer and act on what it decides. A
+// successful repair writes nothing — spec §2 goal 3.
+func runHeal(args []string) error {
+	app, err := newApp()
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), healTimeout)
+	defer cancel()
+	return app.Heal(ctx)
+}
+
+// adoptTimeout, doctorTimeout, and healTimeout bound each command's
+// whole run (browsing plus however many printers it probes), not any
+// single network call within it — those are bounded individually inside
+// internal/cli.
+const (
+	adoptTimeout  = 30 * time.Second
+	doctorTimeout = 30 * time.Second
+	healTimeout   = 60 * time.Second
+)
+
+// newApp wires every port into a *cli.App using this platform's real
+// adapters: Bonjour discovery, the local cupsd, and a JSON store at
+// storePath. It is the one place production ties these together — every
+// internal/cli test uses fakes instead.
+func newApp() (*cli.App, error) {
+	path, err := storePath()
+	if err != nil {
+		return nil, fmt.Errorf("find where to keep adopted printers: %w", err)
+	}
+	disco := newDiscoverer()
+	return &cli.App{
+		Disco:      disco,
+		Queues:     newAdmin(),
+		Store:      store.NewFileStore(path),
+		Keyer:      newNetworkKeyer(),
+		Out:        os.Stdout,
+		Strategies: resolve.DefaultStrategies(disco),
+	}, nil
+}
+
+// storePath returns where this machine's adopted-printer store lives:
+// a single JSON file under the current user's per-user application
+// data directory, created on first write with permissions that reflect
+// what it records (store.NewFileStore handles that part).
+func storePath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("find the current user's home directory: %w", err)
+	}
+	return filepath.Join(home, "Library", "Application Support", "printkeeper", "adopted.json"), nil
 }
 
 // runInspect implements `printkeeper inspect [--json] [uri]`. With no uri
