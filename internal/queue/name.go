@@ -25,6 +25,19 @@ const maxCUPSNameLength = 127
 // from becoming a silent collision: SanitiseName never returns a name
 // present in taken, instead appending "_2", "_3", and so on until it
 // finds one that is free.
+//
+// The collision check against taken is case-insensitive: cupsd itself
+// folds printer names case-insensitively (confirmed by hand against a
+// real installation — "lpstat -p epson_l4260_series" resolved the exact
+// same queue as an existing "EPSON_L4260_Series"), and foldToCUPSCharset
+// always lower-cases whatever name it produces. A case-sensitive check
+// here would miss a collision with any taken name that was not already
+// lower-cased — including, in particular, a queue a user configured by
+// hand outside this tool, in whatever case its own name happens to use.
+// Missing that collision means the caller's eventual Create silently
+// repoints a real queue nothing here was told to touch, so this check
+// is this package's responsibility, not something every caller must
+// remember to normalise before calling in.
 func SanitiseName(advertised string, taken []string) string {
 	base := foldToCUPSCharset(advertised)
 	if base == "" {
@@ -34,7 +47,7 @@ func SanitiseName(advertised string, taken []string) string {
 
 	takenSet := make(map[string]struct{}, len(taken))
 	for _, t := range taken {
-		takenSet[t] = struct{}{}
+		takenSet[strings.ToLower(t)] = struct{}{}
 	}
 
 	name := base

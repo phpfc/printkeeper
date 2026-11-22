@@ -105,6 +105,28 @@ func TestSanitiseNameRespectsLengthCap(t *testing.T) {
 	assertValidCUPSName(t, second)
 }
 
+// TestSanitiseNameAvoidsCaseInsensitiveCollision pins a real defect
+// found by hand against this machine's actual cupsd: cupsd folds
+// printer names case-insensitively — confirmed directly, "lpstat -p
+// epson_l4260_series" resolved the exact same queue as an existing
+// "EPSON_L4260_Series" — but SanitiseName's own collision check used to
+// be a plain, case-sensitive Go map lookup. foldToCUPSCharset always
+// lower-cases whatever it produces, so a caller that only ever passes
+// lower-cased names into taken never notices; the trap springs the
+// moment taken carries a name in any other case, such as a queue a
+// user configured by hand outside printkeeper. Getting this wrong means
+// Create silently repoints a real queue nothing here was told to
+// touch — the global "never act on a queue the user did not adopt"
+// constraint, broken by a case fold rather than a race.
+func TestSanitiseNameAvoidsCaseInsensitiveCollision(t *testing.T) {
+	got := SanitiseName("EPSON L4260 Series", []string{"EPSON_L4260_Series"})
+
+	if strings.EqualFold(got, "EPSON_L4260_Series") {
+		t.Fatalf("SanitiseName(%q, [%q]) = %q, which cupsd folds to the same queue name as the already-taken one", "EPSON L4260 Series", "EPSON_L4260_Series", got)
+	}
+	assertValidCUPSName(t, got)
+}
+
 // assertValidCUPSName checks the character-set and length rules CUPS
 // enforces on a queue name: printable ASCII, no space, "/", or "#", at
 // most 127 characters.
